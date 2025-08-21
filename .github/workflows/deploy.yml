@@ -1,0 +1,40 @@
+name: Deploy React App to Internal Server
+
+on:
+  push:
+    branches:
+      - main  # or your deployment branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build React app
+      run: npm run build
+
+    - name: Setup SSH key and known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan 3.7.43.81 >> ~/.ssh/known_hosts
+
+    - name: Deploy to remote server
+      run: |
+        rsync -avz --delete ./build/ ubuntu@3.7.43.81:~/react-app/
+        ssh ubuntu@3.7.43.81 "
+          pm2 delete react-app || true;
+          pm2 serve ~/react-app 4200 --name react-app --spa
+        "
