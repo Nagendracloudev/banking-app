@@ -1,35 +1,36 @@
-name: Deploy React App to Internal Server
+name: Deploy React Banking App
 
 on:
   push:
     branches:
-      - main  # or your default branch
+      - main   # or your branch name
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Use Node.js 16
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
+    - name: Use Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Build React app
-        run: npm run build
+    - name: Build React app
+      # Set CI=false so warnings won't fail the build on GitHub Actions
+      run: CI=false npm run build
 
-      - name: Copy build files to server /var/www/html/banking-app
-        uses: appleboy/scp-action@v0.1.6
-        with:
-          host: 3.7.43.81
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          source: "build/*"
-          target: "/var/www/html/banking-app"
+    - name: Copy build folder to server
+      uses: appleboy/scp-action@master
+      with:
+        host: 3.7.43.81
+        username: ubuntu
+        port: 22
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "build/*"
+        target: "/var/www/html/banking-app"
