@@ -1,40 +1,38 @@
-name: Deploy React App to Internal Server
+name: Build and Deploy React App
 
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - main  # your main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-    - name: Install dependencies
-      run: npm install
+      - name: Apply npm resolutions fix
+        run: npx npm-force-resolutions
 
-    - name: Build React app
-      run: npm run build
+      - name: Install dependencies
+        run: npm install
 
-    - name: Setup SSH key and known_hosts
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan 3.7.43.81 >> ~/.ssh/known_hosts
+      - name: Build React app
+        run: npm run build
 
-    - name: Deploy to remote server
-      run: |
-        rsync -avz --delete ./build/ ubuntu@3.7.43.81:~/react-app/
-        ssh ubuntu@3.7.43.81 "
-          pm2 delete react-app || true;
-          pm2 serve ~/react-app 4200 --name react-app --spa
-        "
+      - name: Copy build files to server /var/www/html/banking-app
+        uses: appleboy/scp-action@v0.1.8
+        with:
+          host: 3.7.43.81
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "build/*"
+          target: "/var/www/html/banking-app"
